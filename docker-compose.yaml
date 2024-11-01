@@ -19,15 +19,20 @@
 ---
 version: '3.8'
 
+x-airflow-common-env: &airflow-common-env
+  AIRFLOW__CORE__EXECUTOR: LocalExecutor
+  AIRFLOW__CORE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
+  AIRFLOW__CORE__FERNET_KEY: ''
+  AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
+  AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+  AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session'
+
 x-airflow-common: &airflow-common
-  image: apache/airflow:2.6.2
+  build: 
+    context: .
+    dockerfile: Dockerfile
   environment:
-    AIRFLOW__CORE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
-    AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
-    _PIP_ADDITIONAL_REQUIREMENTS: ${_PIP_ADDITIONAL_REQUIREMENTS:- pysurfline apache-airflow}
-
-
-
+    <<: *airflow-common-env
   volumes:
     - ./dags:/opt/airflow/dags
     - ./logs:/opt/airflow/logs
@@ -58,15 +63,19 @@ services:
 
   airflow-init:
     <<: *airflow-common
-    entrypoint: /bin/bash -c "/bin/bash -c \"$${@}\""
+    entrypoint: /bin/bash
     command: |
       /bin/bash -c "
-        airflow db init
-        airflow db upgrade
-        airflow users create -r Admin -u admin -e airflow@airflow.com -f admin -l user -p airflow
+        mkdir -p /sources/logs /sources/dags /sources/plugins
+        chown -R "${AIRFLOW_UID}:0" /sources/{logs,dags,plugins}
+        exec /entrypoint airflow version
       "
     environment:
       <<: *airflow-common-env
+      _AIRFLOW_DB_UPGRADE: 'true'
+      _AIRFLOW_WWW_USER_CREATE: 'true'
+      _AIRFLOW_WWW_USER_USERNAME: ${_AIRFLOW_WWW_USER_USERNAME:-airflow}
+      _AIRFLOW_WWW_USER_PASSWORD: ${_AIRFLOW_WWW_USER_PASSWORD:-airflow}
 
   airflow-scheduler:
     <<: *airflow-common
@@ -84,8 +93,6 @@ services:
       timeout: 10s
       retries: 5
     restart: always
-    environment:
-      <<: *airflow-common-env
 
 volumes:
   my-db:

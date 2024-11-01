@@ -1,0 +1,7 @@
+# Airflow core requirements
+apache-airflow==2.6.2
+psycopg2-binary
+
+# specific project requirements
+pysurfline
+requests
