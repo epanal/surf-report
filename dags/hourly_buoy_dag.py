@@ -11,7 +11,7 @@ import re
 default_args = {
     'owner': 'airflow',
     'depends_on_past': False,
-    'start_date': pendulum.today('UTC').subtract(days=1),
+    'start_date': pendulum.now('America/Los_Angeles').subtract(days=1),
     'email_on_failure': False,
     'email_on_retry': False,
     'retries': 1,
@@ -20,7 +20,7 @@ default_args = {
 
 def get_daily_file_paths(data_folder):
     """Generate file paths for daily data files"""
-    current_date = datetime.now().strftime('%Y%m%d')
+    current_date = pendulum.now('America/Los_Angeles').strftime("%Y%m%d")
     return {
         'csv': os.path.join(data_folder, f"aptos_data_{current_date}.csv")
     }
@@ -162,7 +162,7 @@ def cleanup_old_files(**context):
     raw_data_folder = '/opt/airflow/raw_data/buoy'
     processed_data_folder = '/opt/airflow/processed_data/buoy'
 
-    cutoff_date = datetime.now() - timedelta(days=2)
+    cutoff_date = pendulum.now('America/Los_Angeles') - timedelta(days=2)
     
     for filename in os.listdir(raw_data_folder):
         try:
@@ -187,6 +187,7 @@ def cleanup_old_files(**context):
                 logging.info(f"Removed old file: {filename}")
         except (ValueError, IndexError) as e:
             continue
+        
 
 with DAG(
     'aptos_buoy_data',
