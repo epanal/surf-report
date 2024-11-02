@@ -8,11 +8,14 @@ import logging
 import pendulum
 import os
 
+# Set the timezone to GMT
+gmt_timezone = pendulum.timezone("GMT")
+
 # Set up default arguments for the daily DAG
 default_args_daily = {
     'owner': 'airflow',
     'depends_on_past': False,
-    'start_date': pendulum.today('America/Los_Angeles').subtract(days=1),  # Start yesterday
+    'start_date': datetime(2024, 1, 1, tzinfo=gmt_timezone),
     'email_on_failure': False,
     'email_on_retry': False,
     'retries': 1,
@@ -36,7 +39,6 @@ def load_s3_data():
         session = boto3.Session(
             aws_access_key_id=aws_access_key,
             aws_secret_access_key=aws_secret_key,
-            region_name='us-west-1'  # Add your AWS region here
         )
         s3 = session.resource('s3')
         

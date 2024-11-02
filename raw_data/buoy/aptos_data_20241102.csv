@@ -3,3 +3,4 @@ report_date,report_time,swell_height_ft,swell_period_sec,air_temp_f,water_temp_f
 11/02/24,14:00 GMT,2.0,13.0,54.0,56.1
 11/02/24,15:00 GMT,2.0,13.0,53.8,56.1
 11/02/24,16:00 GMT,2.3,13.0,NA,56.3
+11/02/24,17:00 GMT,1.6,13.0,55.2,56.7

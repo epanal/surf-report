@@ -123,17 +123,84 @@ import logging
 # download_data()
 
 
-import boto3
-import os
+# import boto3
+# import os
 
-# Create a session using environment variables
-session = boto3.Session(
-    aws_access_key_id=os.getenv('AWS_ACCESS_KEY_ID'),
-    aws_secret_access_key=os.getenv('AWS_SECRET_ACCESS_KEY'),
-    region_name=os.getenv('AWS_DEFAULT_REGION')
+# # Create a session using environment variables
+# session = boto3.Session(
+#     aws_access_key_id=os.getenv('AWS_ACCESS_KEY_ID'),
+#     aws_secret_access_key=os.getenv('AWS_SECRET_ACCESS_KEY'),
+#     region_name=os.getenv('AWS_DEFAULT_REGION')
+# )
+
+# # Try listing S3 buckets
+# s3 = session.resource('s3')
+# for bucket in s3.buckets.all():
+#     print(bucket.name)
+
+############################
+
+#     # Establishing the connection
+conn = psycopg2.connect(
+    database="storm", user='postgres', password='wavestorm', host='172.17.0.1', port='5432'
 )
+cursor = conn.cursor()
 
-# Try listing S3 buckets
-s3 = session.resource('s3')
-for bucket in s3.buckets.all():
-    print(bucket.name)
+#     # Executing a function using the execute() method
+#     cursor.execute("SELECT version()")
+#     data = cursor.fetchone()
+#     print("Connection established to: ", data)
+
+#     s3 = boto3.client('s3', aws_access_key_id="", aws_secret_access_key="")
+#     get_last_modified = lambda obj: int(obj['LastModified'].strftime('%s'))
+#     objs = s3.list_objects_v2(Bucket='wavestorm')['Contents']
+#     last_added = [obj['Key'] for obj in sorted(objs, key=get_last_modified)][-1]
+
+#     command = """
+#         CREATE TEMPORARY TABLE IF NOT EXISTS staging_surf_report (
+#             timestamp TIMESTAMP PRIMARY KEY,
+#             surf_min INTEGER,
+#             surf_max INTEGER,
+#             surf_optimalScore INTEGER,
+#             surf_plus BOOL,
+#             surf_humanRelation VARCHAR(255),
+#             surf_raw_min NUMERIC,
+#             surf_raw_max NUMERIC,
+#             speed NUMERIC,
+#             direction NUMERIC,
+#             directionType VARCHAR(255),
+#             gust NUMERIC,
+#             optimalScore INTEGER,
+#             temperature NUMERIC,
+#             condition VARCHAR(255)
+#         );
+#     """
+#     cursor.execute(command)
+#     conn.commit()
+
+#     print(last_added)
+#     with open(dag_path + '/processed_data/' + last_added, 'r') as f:
+#         try:
+#             cursor.copy_from(f, 'staging_surf_report', sep=",")
+#             print("Data inserted using copy_from_datafile() successfully....")
+#         except (Exception, psycopg2.DatabaseError) as err:
+#             print("Database Error: ", err)
+#             cursor.close()
+#             conn.close()
+#             return
+
+#     command = """
+#         INSERT INTO surf_report_hmb
+#         (timestamp, surf_min, surf_max, surf_optimalScore, surf_plus, surf_humanRelation, surf_raw_min, surf_raw_max, speed, direction, directionType, gust, optimalScore, temperature, condition)
+#         SELECT *
+#         FROM staging_surf_report
+#         WHERE NOT EXISTS (
+#             SELECT timestamp
+#             FROM surf_report_hmb
+#             WHERE staging_surf_report.timestamp = surf_report_hmb.timestamp
+#         );
+#     """
+#     cursor.execute(command)
+#     conn.commit()
+#     cursor.close()
+#     conn.close()

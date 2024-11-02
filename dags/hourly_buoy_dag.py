@@ -8,10 +8,14 @@ import csv
 import os
 import re
 
+
+# Set the timezone to GMT
+gmt_timezone = pendulum.timezone("GMT")
+
 default_args = {
     'owner': 'airflow',
     'depends_on_past': False,
-    'start_date': pendulum.today('America/Los_Angeles').subtract(days=1),
+    'start_date': datetime(2024, 1, 1, tzinfo=gmt_timezone),
     'email_on_failure': False,
     'email_on_retry': False,
     'retries': 1,
