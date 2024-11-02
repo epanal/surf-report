@@ -111,13 +111,13 @@ def download_data(**context):
             
             # If it's the last attempt, raise an Airflow exception
             if attempt == max_retries - 1:
-                raise AirflowException(f"Failed to download surf forecast after {max_retries} attempts")
+                raise AirflowException(f"Failed to download surf forecast after {max_retries} attempts") # type: ignore
             
             # Wait before retrying
             time.sleep(base_backoff_time * (2 ** attempt))
     
     # This should never be reached due to the exception above, 
     # but included for completeness
-    raise AirflowException("Maximum retries exceeded for surf forecast download")
+    raise AirflowException("Maximum retries exceeded for surf forecast download") # type: ignore
 
 download_data()
