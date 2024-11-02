@@ -27,7 +27,6 @@ RUN pip install --no-cache-dir \
 
 # Copy your DAGs and other necessary files
 COPY --chown=airflow:root dags/ ./dags/
-COPY --chown=airflow:root plugins/ ./plugins/
 
 # Optional: Set environment variables if needed
 ENV PYTHONPATH=/opt/airflow
