@@ -35,10 +35,8 @@ def extract_value(text, pattern):
             return None
     return None
 
-def parse_buoy_text(text_data):
-    """
-    Parse the NDBC buoy text data with the specific format for station 46282
-    """
+def parse_buoy_text(text_data, csv_path):
+    """Parse NDBC buoy text data with timestamp checking against existing CSV data."""
     try:
         lines = text_data.split('\n')
         data = {}
@@ -47,21 +45,37 @@ def parse_buoy_text(text_data):
         
         # Extract timestamp
         time_pattern = r"(\d+:\d+ (?:am|pm) PDT) (\d+/\d+/\d+)"
+        match_count = 0
+        
+        # Check if this timestamp already exists in the CSV
+        def timestamp_exists(date, time):
+            if os.path.exists(csv_path):
+                with open(csv_path, 'r') as f:
+                    reader = csv.DictReader(f)
+                    for row in reader:
+                        if row['report_date'] == date and row['report_time'] == time:
+                            return True
+            return False
+
         for line in lines:
             match = re.search(time_pattern, line)
             if match:
-                data['report_time'] = match.group(1)
-                data['report_date'] = match.group(2)
-                break
+                match_count += 1
+                # Check if this is the second instance
+                if match_count == 2:
+                    data['report_time'] = match.group(1)
+                    data['report_date'] = match.group(2)
+                    # Skip if this timestamp already exists
+                    if timestamp_exists(data['report_date'], data['report_time']):
+                        logging.info("Timestamp already processed; skipping.")
+                        return None
+                    break
         
-        # Extract measurements
+        # Continue with additional parsing for other data points
         for line in lines:
-            # Check for section markers
             if 'Wave Summary' in line:
                 in_wave_summary = True
                 continue
-                
-            # Parse temperatures before Wave Summary section
             if not in_wave_summary and not found_temps:
                 if 'Air Temp:' in line:
                     data['air_temp_f'] = extract_value(line, r'Air Temp: ([\d.]+) °F')
@@ -69,14 +83,10 @@ def parse_buoy_text(text_data):
                     data['swell_period_sec'] = extract_value(line, r'Peak Period: ([\d.]+) sec')    
                 elif 'Water Temp:' in line:
                     data['water_temp_f'] = extract_value(line, r'Water Temp: ([\d.]+) °F')
-                
-                    
-            # Parse wave data only in Wave Summary section
             if in_wave_summary:
                 if 'Swell:' in line:
                     data['swell_height_ft'] = extract_value(line, r'Swell: ([\d.]+) ft')
         
-        # Log the parsed values for debugging
         logging.info(f"Parsed data: {data}")
         
         return data
@@ -85,6 +95,7 @@ def parse_buoy_text(text_data):
         logging.error(f"Error parsing buoy data: {e}")
         logging.error(f"Raw text:\n{text_data}")
         return None
+
 
 def write_to_csv(csv_path, data):
     """Write or append data to CSV file with wave and temperature data"""
@@ -126,25 +137,25 @@ def download_buoy_data(**context):
         response = requests.get(url)
         response.raise_for_status()
         
-        # Log the raw response for debugging
         logging.info(f"Raw data received:\n{response.text}")
         
         # Get daily file paths
         daily_files = get_daily_file_paths(processed_data_folder)
         
         # Parse the data
-        parsed_data = parse_buoy_text(response.text)
+        parsed_data = parse_buoy_text(response.text, daily_files['csv'])
         
         if parsed_data:
             write_to_csv(daily_files['csv'], parsed_data)
             logging.info("New data appended successfully")
         else:
-            logging.error("Failed to parse buoy data")
+            logging.info("No new data to append (duplicate timestamp).")
     
     except requests.RequestException as e:
         logging.error(f"Error downloading data: {e}")
     
     return "Data collection completed"
+
 
 def cleanup_old_files(**context):
     """Remove files older than 2 days"""
