@@ -41,7 +41,7 @@ def load_s3_data():
         s3 = session.resource('s3')
         
         # Add debug logging for file path
-        file_path = os.path.join(dag_path, 'processed_data/buoy', f'aptos_data_{surfdate}.csv')
+        file_path = os.path.join(dag_path, 'raw_data/buoy', f'aptos_data_{surfdate}.csv')
         logging.info(f"Attempting to upload file from: {file_path}")
         
         s3.meta.client.upload_file(

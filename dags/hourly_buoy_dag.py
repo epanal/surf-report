@@ -140,7 +140,7 @@ def download_buoy_data(**context):
         logging.info(f"Raw data received:\n{response.text}")
         
         # Get daily file paths
-        daily_files = get_daily_file_paths(processed_data_folder)
+        daily_files = get_daily_file_paths(raw_data_folder)
         
         # Parse the data
         parsed_data = parse_buoy_text(response.text, daily_files['csv'])
