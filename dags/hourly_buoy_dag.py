@@ -36,18 +36,17 @@ def extract_value(text, pattern):
     return None
 
 def parse_buoy_text(text_data, csv_path):
-    """Parse NDBC buoy text data with timestamp checking against existing CSV data."""
+    """Parse NDBC buoy text data with GMT timestamp checking against existing CSV data."""
     try:
         lines = text_data.split('\n')
         data = {}
         in_wave_summary = False
         found_temps = False
         
-        # Extract timestamp
-        time_pattern = r"(\d+:\d+ (?:am|pm) PDT) (\d+/\d+/\d+)"
+        # Extract GMT timestamp - looking for patterns like "1330 GMT 11/02/24" or "0230 GMT 11/02/24"
+        gmt_pattern = r"(\d{4}) GMT (\d{1,2}/\d{1,2}/\d{2,4})"
         match_count = 0
         
-        # Check if this timestamp already exists in the CSV
         def timestamp_exists(date, time):
             if os.path.exists(csv_path):
                 with open(csv_path, 'r') as f:
@@ -58,13 +57,19 @@ def parse_buoy_text(text_data, csv_path):
             return False
 
         for line in lines:
-            match = re.search(time_pattern, line)
+            match = re.search(gmt_pattern, line)
             if match:
                 match_count += 1
-                # Check if this is the second instance
+                # Check if this is the second instance (in Wave Summary section)
                 if match_count == 2:
-                    data['report_time'] = match.group(1)
-                    data['report_date'] = match.group(2)
+                    gmt_time = match.group(1)
+                    gmt_date = match.group(2)
+                    
+                    # Format time to include ':' (e.g., "1330" becomes "13:30")
+                    formatted_time = f"{gmt_time[:2]}:{gmt_time[2:]} GMT"
+                    data['report_time'] = formatted_time
+                    data['report_date'] = gmt_date
+                    
                     # Skip if this timestamp already exists
                     if timestamp_exists(data['report_date'], data['report_time']):
                         logging.info("Timestamp already processed; skipping.")
@@ -95,7 +100,6 @@ def parse_buoy_text(text_data, csv_path):
         logging.error(f"Error parsing buoy data: {e}")
         logging.error(f"Raw text:\n{text_data}")
         return None
-
 
 def write_to_csv(csv_path, data):
     """Write or append data to CSV file with wave and temperature data"""
