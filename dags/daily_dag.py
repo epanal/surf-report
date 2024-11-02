@@ -23,10 +23,7 @@ def load_s3_data():
     today = pendulum.today('America/Los_Angeles')
     surfdate = today.strftime("%Y%m%d")
     dag_path = '/opt/airflow'  # Adjust this path as necessary
-    session = boto3.Session(
-        aws_access_key_id="AKIAVY2PG6Y67GQRYZFW", 
-        aws_secret_access_key="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",  
-    )
+    session = boto3.Session() # No need to pass aws_access_key_id or aws_secret_access_key
     s3 = session.resource('s3')
     
     try:
