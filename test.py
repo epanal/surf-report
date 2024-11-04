@@ -139,68 +139,88 @@ import logging
 #     print(bucket.name)
 
 ############################
+def load_data():
+    # Data directory matches your docker-compose volume mapping
+    DATA_DIR = './processed_data/buoy'
 
-#     # Establishing the connection
-conn = psycopg2.connect(
-    database="storm", user='postgres', password='wavestorm', host='172.17.0.1', port='5432'
-)
-cursor = conn.cursor()
 
-#     # Executing a function using the execute() method
-#     cursor.execute("SELECT version()")
-#     data = cursor.fetchone()
-#     print("Connection established to: ", data)
+    #     # Establishing the connection
+    conn = psycopg2.connect(
+        database="airflow", user='airflow', password='airflow', host='localhost', port='5432'
+    )
+    cursor = conn.cursor()
 
-#     s3 = boto3.client('s3', aws_access_key_id="", aws_secret_access_key="")
-#     get_last_modified = lambda obj: int(obj['LastModified'].strftime('%s'))
-#     objs = s3.list_objects_v2(Bucket='wavestorm')['Contents']
-#     last_added = [obj['Key'] for obj in sorted(objs, key=get_last_modified)][-1]
+    # Executing a function using the execute() method
+    cursor.execute("SELECT version()")
+    data = cursor.fetchone()
+    print("Connection established to: ", data)
 
-#     command = """
-#         CREATE TEMPORARY TABLE IF NOT EXISTS staging_surf_report (
-#             timestamp TIMESTAMP PRIMARY KEY,
-#             surf_min INTEGER,
-#             surf_max INTEGER,
-#             surf_optimalScore INTEGER,
-#             surf_plus BOOL,
-#             surf_humanRelation VARCHAR(255),
-#             surf_raw_min NUMERIC,
-#             surf_raw_max NUMERIC,
-#             speed NUMERIC,
-#             direction NUMERIC,
-#             directionType VARCHAR(255),
-#             gust NUMERIC,
-#             optimalScore INTEGER,
-#             temperature NUMERIC,
-#             condition VARCHAR(255)
-#         );
-#     """
-#     cursor.execute(command)
-#     conn.commit()
+    s3 = boto3.client('s3', aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"), aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"))
+    
+    # Get latest file from S3
+    get_last_modified = lambda obj: int(obj['LastModified'].strftime('%s'))
+    objs = s3.list_objects_v2(Bucket='surflinehmbbucket')['Contents']
+    last_added = [obj['Key'] for obj in sorted(objs, key=get_last_modified)][-1]
+    print(last_added)
+    # Download file from S3 # Use basename for the local file path
+    local_file_path = os.path.join(DATA_DIR, os.path.basename(last_added))
+    print(local_file_path)
+    s3.download_file('surflinehmbbucket', last_added, local_file_path)
 
-#     print(last_added)
-#     with open(dag_path + '/processed_data/' + last_added, 'r') as f:
-#         try:
-#             cursor.copy_from(f, 'staging_surf_report', sep=",")
-#             print("Data inserted using copy_from_datafile() successfully....")
-#         except (Exception, psycopg2.DatabaseError) as err:
-#             print("Database Error: ", err)
-#             cursor.close()
-#             conn.close()
-#             return
+    command = """
+            CREATE TABLE IF NOT EXISTS surf_report_aptos (
+                id SERIAL PRIMARY KEY,
+                report_timestamp TIMESTAMP,
+                swell_height_ft NUMERIC,
+                swell_period_sec NUMERIC,
+                air_temp_f NUMERIC,
+                water_temp_f NUMERIC
+            );
+            
+            CREATE TEMPORARY TABLE staging_surf_report (
+                report_date VARCHAR(255),
+                report_time VARCHAR(255),
+                swell_height_ft NUMERIC,
+                swell_period_sec NUMERIC,
+                air_temp_f NUMERIC,
+                water_temp_f NUMERIC
+            );
+        """
+    cursor.execute(command)
+    conn.commit()
 
-#     command = """
-#         INSERT INTO surf_report_hmb
-#         (timestamp, surf_min, surf_max, surf_optimalScore, surf_plus, surf_humanRelation, surf_raw_min, surf_raw_max, speed, direction, directionType, gust, optimalScore, temperature, condition)
-#         SELECT *
-#         FROM staging_surf_report
-#         WHERE NOT EXISTS (
-#             SELECT timestamp
-#             FROM surf_report_hmb
-#             WHERE staging_surf_report.timestamp = surf_report_hmb.timestamp
-#         );
-#     """
-#     cursor.execute(command)
-#     conn.commit()
-#     cursor.close()
-#     conn.close()
+    # Load data from file
+    with open(local_file_path, 'r') as f:
+        # Skip header row
+        next(f)
+        try:
+            cursor.copy_from(f, 'staging_surf_report', sep=',', null='NA')
+            print("Data inserted into staging table successfully")
+        except (Exception, psycopg2.DatabaseError) as err:
+            print("Error loading data:", err)
+            raise
+
+    command = """
+        INSERT INTO surf_report_aptos 
+        (report_timestamp, swell_height_ft, swell_period_sec, air_temp_f, water_temp_f)
+        SELECT 
+            TO_TIMESTAMP(report_date || ' ' || report_time, 'MM/DD/YY HH24:MI GMT'),
+            swell_height_ft,
+            swell_period_sec,
+            air_temp_f,
+            water_temp_f
+        FROM staging_surf_report
+        WHERE NOT EXISTS (
+            SELECT 1
+            FROM surf_report_aptos
+            WHERE surf_report_aptos.report_timestamp = 
+                TO_TIMESTAMP(staging_surf_report.report_date || ' ' || 
+                            staging_surf_report.report_time, 'MM/DD/YY HH24:MI GMT')
+            );
+    """
+    cursor.execute(command)
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+load_data()

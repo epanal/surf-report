@@ -24,7 +24,7 @@ default_args = {
 
 def get_daily_file_paths(data_folder):
     """Generate file paths for daily data files"""
-    current_date = pendulum.today('America/Los_Angeles').strftime("%Y%m%d")
+    current_date = pendulum.today('GMT').strftime("%Y%m%d")
     return {
         'csv': os.path.join(data_folder, f"aptos_data_{current_date}.csv")
     }
@@ -170,7 +170,7 @@ def cleanup_old_files(**context):
     raw_data_folder = '/opt/airflow/raw_data/buoy'
     processed_data_folder = '/opt/airflow/processed_data/buoy'
 
-    cutoff_date = pendulum.now('America/Los_Angeles') - timedelta(days=2)
+    cutoff_date = pendulum.now('GMT') - timedelta(days=2)
     
     for filename in os.listdir(raw_data_folder):
         try:
@@ -178,7 +178,7 @@ def cleanup_old_files(**context):
             file_date = datetime.strptime(date_str, '%Y%m%d')
             
             # Convert file_date to Pacific Time
-            file_date = pendulum.instance(file_date).in_tz('America/Los_Angeles')
+            file_date = pendulum.instance(file_date).in_tz('GMT')
             
             if file_date < cutoff_date:
                 file_path = os.path.join(raw_data_folder, filename)
@@ -192,8 +192,8 @@ def cleanup_old_files(**context):
             date_str = filename.split('_')[-1].split('.')[0]
             file_date = datetime.strptime(date_str, '%Y%m%d')
             
-            # Convert file_date to Pacific Time
-            file_date = pendulum.instance(file_date).in_tz('America/Los_Angeles')
+            # Convert file_date to GMT Time
+            file_date = pendulum.instance(file_date).in_tz('GMT')
             
             if file_date < cutoff_date:
                 file_path = os.path.join(processed_data_folder, filename)
