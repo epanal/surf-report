@@ -27,16 +27,16 @@ services:
   postgres:
     image: postgres:13
     environment:
-      POSTGRES_USER: airflow
-      POSTGRES_PASSWORD: airflow
-      POSTGRES_DB: airflow
+      POSTGRES_USER: surfer
+      POSTGRES_PASSWORD: surfboard
+      POSTGRES_DB: letsgosurfing
       PGDATA: /var/lib/postgresql/data
     ports:
       - "5432:5432"
     volumes:
       - my-db:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD", "pg_isready", "-U", "airflow"]
+      test: ["CMD", "pg_isready", "-U", "surfer"]
       interval: 10s
       timeout: 5s
       retries: 5

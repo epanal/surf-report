@@ -69,9 +69,9 @@ def download_and_load_s3_data():
 
     #     # Establishing the connection
     conn = psycopg2.connect(
-        database="airflow",
-        user="airflow",
-        password="airflow",
+        database="letsgosurfing",
+        user="surfer",
+        password="surfboard",
         host="host.docker.internal",
         port="5432"
     )
